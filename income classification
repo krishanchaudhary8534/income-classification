@@ -1,0 +1,95 @@
+
+!pip install resample
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+data=pd.read_csv('income.csv')
+data.isna().sum()
+
+data.columns
+data.info()
+data['JobType'].unique()
+###############################
+#JobType and occupation have the missing values
+#lets replace with a mode valuedata['JobType'].mode()
+
+data['JobType']=data['JobType'].replace(np.nan,'Prof-Private')
+data['occupation'].unique()
+data['occupation'].mode()
+data['occupation']=data['occupation'].replace(np.nan,'Prof-specialty')
+
+data.isna().sum()
+#########################################################################
+#lets check whether the data is balenced or imbalanced 
+#the unique value counts in the output column should
+#be 50-50
+data['SalStat'].unique()
+data['SalStat'].value_counts()
+
+data.drop_duplicates(inplace=True)
+##############################
+#split the data into training and testing data
+x=data.drop(['SalStat'],axis=1)
+y=data['SalStat']
+
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test=train_test_split(x,y,
+                                               test_size=0.20,
+                                               random_state=0)
+######################################################################
+from sklearn.utils import resample
+data['SalStat'].unique()
+x=pd.concat([x_train,y_train],axis=1)
+
+greater_fifty=x[x.SalStat==' greater than 50,000']
+lesser_fifty=x[x.SalStat==' less than or equal to 50,000']
+
+upsampled=resample(greater_fifty,
+                   replace=True,
+                   n_samples=len(lesser_fifty),
+                   random_state=27)
+
+df=pd.concat([lesser_fifty,upsampled],axis=0)
+
+df['SalStat'].value_counts()
+#####################################
+data['SalStat'].unique()
+#lesser 50k replace with 0,
+#greater than 50k replace 1
+
+df['SalStat']=df['SalStat'].map(
+    {' less than or equal to 50,000':0,
+     ' greater than 50,000':1})
+
+################################
+#lets check how numerical variable effect
+#the SalStat
+df.columns
+columns=['age','hoursperweek']
+for column in columns:
+    plt.figure(figsize=(10,6))
+    sns.boxplot(x=df['SalStat'],y=df[column])
+    print('\n')
+#######################
+columns=['JobType', 'EdType', 'maritalstatus', 'occupation',
+       'relationship', 'race', 'gender',
+       'nativecountry']
+
+for column in columns:
+    plt.figure(figsize=(5,3))
+    sns.countplot(x=df['SalStat'],hue=df[column])
+    print('\n')
+#native country in significant
+#we can drop it
+sns.boxplot(x=df['SalStat'],y=df['capitalgain'])
+plt.figure(figsize=(25,6))
+sns.countplot(x=df['capitalgain'],hue=df['SalStat'])
+
+plt.figure(figsize=(25,6))
+sns.countplot(x=df['capitalgain'],hue=df['SalStat'])
+#'capitalgain','capitalloss','insignificant'  
+df.drop(['capitalgain','capitalloss','nativecountry'],
+        axis=1,inplace=True)    
